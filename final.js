@@ -38,20 +38,9 @@ fabricJSON.objects.forEach(obj => {
             obj.scaleX = aspect_change_x*scaleX
             obj.scaleY = aspect_change_y*scaleY
         }else{
-            if(obj.width==512 && obj.height===512){
-                left_margin = obj.left
-                top_margin = obj.top
-
-                let height_req=0
-                let width_req=0
-
-                if ((top_margin+(obj.height/2)) > (canvas_height/2)){
-                    height_req = Math.abs(aspect_change_y-1)*obj.height
-                }
-    
-                obj.left = (aspect_change_x*left_margin)+width_req
-                obj.top = (aspect_change_y*top_margin)+height_req
-            }else{
+            obj_actual_height = obj.height*obj.scaleY
+            obj_actual_width = obj.width*obj.scaleX
+            if(obj_actual_width>=1070 && obj_actual_width<=1090 && obj_actual_height>=1070 && obj_actual_width<=1090){
                 height = obj.height
                 width = obj.width
     
@@ -65,7 +54,16 @@ fabricJSON.objects.forEach(obj => {
     
                 const crop = ((width*scale)-canvas_width)/(2*scale)
     
-                fabricJSON.objects[index].cropX = crop
+                obj.cropX = crop
+            }else{
+                left_margin = obj.left
+                top_margin = obj.top
+
+                let height_req=Math.abs(aspect_change_y-1)*obj.height
+                let width_req=0
+    
+                obj.left = (aspect_change_x*left_margin)+width_req
+                obj.top = (aspect_change_y*top_margin)+height_req
             }
         }
     }else{

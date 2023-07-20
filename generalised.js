@@ -1,12 +1,13 @@
 var fabric = require('fabric').fabric
 var fs = require('fs');
 
-const input_image_width = 1080
-const input_image_height = 1080
+const input_image_width = 1200
+const input_image_height = 628
+const curr_aspect_ratio = "1.91:1"
 
-const req_aspect_ratio = "9:16"
+const req_aspect_ratio = "1:1"
 const req_image_width = 1080
-const req_image_height = 1920
+const req_image_height = 1080
 
 const convertJSON = (baseJSON, aspect_change_x, aspect_change_y) => {
     baseJSON.objects.forEach((obj) => {
@@ -55,13 +56,13 @@ const convertJSON = (baseJSON, aspect_change_x, aspect_change_y) => {
     return baseJSON
 }
 
-const render_image = (path, json, width, height) => {
+const render_image = (path, json) => {
     const canvas = new fabric.Canvas('canvas', { width: req_image_width, height: req_image_height });
     canvas.loadFromJSON(json, () => {
         const image = canvas.toDataURL('image/png');
         var data = image.replace(/^data:image\/\w+;base64,/, "");
         var buf = Buffer.from(data, 'base64');
-        fs.writeFileSync(`results/${req_aspect_ratio}/` + path, buf);
+        fs.writeFileSync(`results/` + path, buf);
     });
 }
 
@@ -77,47 +78,98 @@ const scaleJSON = (baseJSON, scale_factor) => {
     return baseJSON
 }
 
-for(let i=1; i<=12; i++){
-    const fabricJSON = require(`./JSON/resp_${i}.json`);
-    const fontsData = fabricJSON.objects.filter(obj => obj.type === "textbox").map(obj => {
-        return {
-            family: obj.fontFamily,
-            weight: obj.fontWeight,
-            size: obj.fontSize,
-            style: obj.fontStyle,
-            path: '../fonts/all/' + obj.fontFamily + '.ttf'
+
+const aspect_changes = {
+    "1:1": {
+        "9:16": {
+            "x": 1,
+            "y": 1.7778
+        },
+        "1.91:1": {
+            "x": 1.91,
+            "y": 1
+        },
+        "4:5": {
+            "x": 1,
+            "y": 1.25
         }
-    });
+    },
+    "9:16": {
+        "1:1": {
+            "x": 1.7778,
+            "y": 1
+        },
+        "1.91:1": {
+            "x" : 3.3956,
+            "y" : 1
+        },
+        "4:5": {
+            "x": 1.4222,
+            "y": 1
+        }
+    },
+    "1.91:1": {
+        "1:1": {
+            "x": 1,
+            "y": 1.91
+        },
+        "9:16": {
+            "x" : 1,
+            "y" : 3.3956
+        },
+        "4:5": {
+            "x": 1,
+            "y": 2.3875
+        }
+    },
+    "4:5": {
+        "1:1": {
+            "x": 1.25,
+            "y": 1
+        },
+        "9:16": {
+            "x" : 1,
+            "y" : 1.4222
+        },
+        "1.91:1": {
+            "x": 2.3875,
+            "y": 1
+        }
+    }
+}
+
+for(let i=12; i<=12; i++){
+    const fabricJSON = require('./1.91_12.json')
+
+    let newJSON = fabricJSON
+    let scaleFactor = 1
+
+    if(req_aspect_ratio==curr_aspect_ratio){
+        scaleFactor = req_image_width/input_image_width
+        newJSON = scaleJSON(newJSON, scaleFactor)
+        render_image('test.png', newJSON)
+        return
+    }
+    render_image('test_initial.png', newJSON)
+    const aspect_values = aspect_changes[curr_aspect_ratio][req_aspect_ratio]
     
-    fontsData?.forEach(obj => {
-        fabric.nodeCanvas.registerFont(obj.path, { family: obj.family, style: obj.style, weight: obj.weight })
-    });
+    const aspect_change_x = aspect_values.x
+    const aspect_change_y = aspect_values.y
 
-    let aspect_change_x = 1
-    let aspect_change_y = 1
-
-    let new_image_width = Math.max(input_image_width, input_image_height)
-    let new_image_height = new_image_width
-
-    if(input_image_width!=input_image_height){
-        aspect_change_x = new_image_width/input_image_width
-        aspect_change_y = new_image_height/input_image_height
-    }
-
-    let newJSON = convertJSON(fabricJSON, aspect_change_x, aspect_change_y)
-
-    const scaleFactor = Math.min(req_image_height, req_image_width)/new_image_width
-    newJSON = scaleJSON(newJSON,scaleFactor)
-
-    aspect_change_x=1
-    aspect_change_y=1
-
-    if(req_image_height>req_image_width){
-        aspect_change_y = req_image_height/req_image_width
-    }else{
-        aspect_change_x = req_image_width/req_image_height
-    }
+    console.log(aspect_change_x, aspect_change_y)
 
     newJSON = convertJSON(newJSON, aspect_change_x, aspect_change_y)
-    render_image(`final_${i}.png`, newJSON)
+    render_image('test_middle.png', newJSON)
+
+    const new_image_width = aspect_change_x*input_image_width
+    const new_image_height = aspect_change_y*input_image_height
+
+    if(new_image_width==input_image_width){
+        scaleFactor = req_image_width/new_image_width
+    }else{
+        scaleFactor = req_image_height/new_image_height
+    }
+
+    newJSON = scaleJSON(newJSON, scaleFactor)
+    render_image('test_final_hor_sq.png', newJSON)
 }
